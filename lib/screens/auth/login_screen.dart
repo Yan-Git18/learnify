@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import 'package:learnify/services/auth_service.dart';
 import 'package:learnify/utils/constants.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,6 +14,72 @@ class _LoginScreenState extends State<LoginScreen> {
   final _validations = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+
+  // Función para iniciar sesión con Firebase
+  Future<void> _loginUser() async {
+  if (!_validations.currentState!.validate()) return;
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  final authService = AuthService();
+  
+  final result = await authService.signIn(
+    email: _emailController.text,
+    password: _passwordController.text,
+  );
+
+  if (mounted) {
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message), backgroundColor: AppColors.primary),
+      );
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  setState(() {
+    _isLoading = false;
+  });
+}
+
+  // Actualizar _resetPassword():
+  Future<void> _resetPassword() async {
+    String email = _emailController.text.trim();
+    
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa tu correo'), backgroundColor: AppColors.orange),
+      );
+      return;
+    }
+
+    final authService = AuthService();
+    final result = await authService.resetPassword(email: email);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.success ? AppColors.primary : Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,12 +129,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
               TextFormField(
                 controller: _passwordController,
+                obscureText: true,
                 keyboardType: TextInputType.text,
                 decoration: InputDecoration(    
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: AppColors.white),
                   ),                   
-                  labelText: "Contraseña", labelStyle: TextStyle(color: AppColors.white),
+                  labelText: "Contraseña", 
+                  labelStyle: TextStyle(color: AppColors.white),
                   border: OutlineInputBorder() ,
                   prefixIcon: Icon(Icons.lock_outline, color: AppColors.white,),
                   
@@ -81,18 +149,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   }                 
                   return null;
                 },
-              ),                           
+              ),
+
+              // Enlace "¿Olvidaste tu contraseña?"
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _resetPassword,
+                  child: const Text(
+                    "¿Olvidaste tu contraseña?",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
 
               SizedBox(height: 15,),
 
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                     if (_validations.currentState!.validate()) {
-                      Navigator.pushReplacementNamed(context, '/home');
-                    }
-                  },
+                  onPressed: _isLoading ? null : _loginUser,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: EdgeInsets.symmetric(vertical: 16),

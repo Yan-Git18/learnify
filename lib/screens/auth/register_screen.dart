@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learnify/services/auth_service.dart';
 import 'package:learnify/utils/constants.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -16,6 +17,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  bool _isLoading = false;
+
+  // Función para registrar usuario con Firebase
+  Future<void> _registerUser() async {
+    if (!_validations.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authService = AuthService();
+
+    final result = await authService.createAccount(
+      name: _nameController.text,
+      lastName: _lastNameController.text,
+      age: int.parse(_ageController.text),
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+
+    if (mounted) {
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.message), backgroundColor: Colors.red),
+        );
+      }
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _lastNameController.dispose();
+    _ageController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,11 +248,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_validations.currentState!.validate()) {
-                      Navigator.pushReplacementNamed(context, '/welcome');
-                    }
-                  },
+                  onPressed: _isLoading ? null : _registerUser,       
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: EdgeInsets.symmetric(vertical: 16),
